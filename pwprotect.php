@@ -1,13 +1,13 @@
 <?php
 $users = [
-  //'username' => [ 'password' => 'MD5_hash_of_password_here' ],
+	//'username' => [ 'password' => 'MD5_hash_of_password_here' ],
 	'admin' => [ 'password' => '5F4DCC3B5AA765D61D8327DEB882CF99' ], // default password is password
 ];
 
 session_start();
 $hash = md5($_SERVER['HTTP_HOST'].'-'.getcwd().'-'.$_SERVER['REMOTE_ADDR']);
-$uri = str_replace('..', '', $_SERVER['REQUEST_URI']);
-if (!isset($_SESSION['pwprotect']) || $_SESSION['pwprotect'] != $hash) {
+$uri = str_replace('..', '', $_SERVER['SCRIPT_URL']);
+if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SESSION['pwprotect']['hash'] != $hash) {
   $showform = true;
   if (isset($_POST['login'])) {
   	if (empty($_POST['username'])) {
@@ -21,8 +21,9 @@ if (!isset($_SESSION['pwprotect']) || $_SESSION['pwprotect'] != $hash) {
       trigger_error("Invalid password for $_POST[username] $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
       echo 'Username or password is incorrect.';
     } else {
-      trigger_error("Login Successful $_POST[username] $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
-      $_SESSION['pwprotect'] = $hash;
+      $username = strtolower($_POST['username']);
+      trigger_error("Login Successful $username $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
+      $_SESSION['pwprotect'] = ['hash' => $hash, 'user' => $username];
       $showform = false;
     }
   }
