@@ -1,2 +1,2 @@
 RewriteEngine On
-RewriteRule ^admin.php$ login.php
+RewriteRule ^admin.php$ pwprotect.php
