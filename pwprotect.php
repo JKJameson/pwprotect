@@ -7,7 +7,7 @@ $users = [
 session_start();
 $hash = md5($_SERVER['HTTP_HOST'].'-'.getcwd().'-'.$_SERVER['REMOTE_ADDR']);
 $uri = str_replace('..', '', $_SERVER['SCRIPT_URL']);
-if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SESSION['pwprotect']['hash'] != $hash) {
+if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SESSION['pwprotect']['hash'] !== $hash) {
   $showform = true;
   if (isset($_POST['login'])) {
   	if (empty($_POST['username'])) {
@@ -17,7 +17,7 @@ if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SES
     } elseif (!array_key_exists($_POST['username'], $users)) {
       trigger_error("Invalid username ($_POST[username]) $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
       echo 'Username or password is incorrect.';
-    } elseif (strtolower($users[$_POST['username']]['password']) != md5($_POST['password'])) {
+    } elseif (strtolower($users[$_POST['username']]['password']) !== md5($_POST['password'])) {
       trigger_error("Invalid password for $_POST[username] $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
       echo 'Username or password is incorrect.';
     } else {
