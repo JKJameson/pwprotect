@@ -13,10 +13,10 @@ if (empty($uri)) die('No URI detected');
 if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SESSION['pwprotect']['hash'] !== $hash) {
   $showform = true;
   if (isset($_POST['login'])) {
-  	if (empty($_POST['username'])) {
-      echo 'Username can not be empty'; 
+    if (empty($_POST['username'])) {
+      echo 'Username can not be empty';
     } elseif (empty($_POST['password'])) {
-      echo 'Password can not be empty'; 
+      echo 'Password can not be empty';
     } elseif (!array_key_exists($_POST['username'], $users)) {
       trigger_error("Invalid username ($_POST[username]) $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
       echo 'Username or password is incorrect.';
@@ -58,4 +58,4 @@ if (isset($_GET['logout'])) {
   echo "<a href=\"$url\">$url</a>";
   exit;
 }
-require ".$uri";
+if (!empty($_SERVER['SCRIPT_URL'])) require ".$uri";
