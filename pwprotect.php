@@ -6,7 +6,9 @@ $users = [
 
 session_start();
 $hash = md5($_SERVER['HTTP_HOST'].'-'.getcwd().'-'.$_SERVER['REMOTE_ADDR']);
-$uri = str_replace('..', '', $_SERVER['SCRIPT_URL']);
+$uri = $_SERVER['SCRIPT_URL'];
+if (empty($uri)) $uri = $_SERVER['SCRIPT_NAME'];
+$uri = str_replace('..', '', $uri);
 if (empty($uri)) die('No URI detected');
 if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SESSION['pwprotect']['hash'] !== $hash) {
   $showform = true;
