@@ -1,13 +1,28 @@
 <?php
 $users = [
-	//'username' => [ 'password' => 'MD5_hash_of_password_here' ],
-	'admin' => [ 'password' => '5F4DCC3B5AA765D61D8327DEB882CF99' ], // default password is password
+	//'username' => [ 'password' => 'SHA256_or_MD5_hash_of_password_here' ],
+	'admin' => [ 'password' => '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8' ], // default password is password
 ];
+$allow_proxy = true; // trust the HTTP_X_FORWARDED_FOR header for IP addresses
+$session_timeout = 3600 * 24;
 
+
+
+ini_set('session.gc_maxlifetime', $session_timeout);
+ini_set('session.cookie_lifetime', $session_timeout);
+session_set_cookie_params([
+    'lifetime' => $session_timeout,
+    'path' => '/',
+    'domain' => '', // or your domain
+    'secure' => true, // true if using HTTPS
+    'httponly' => true,
+    'samesite' => 'Lax' // or 'None' if needed
+]);
+unset($session_timeout);
 session_start();
-$hash = md5($_SERVER['HTTP_HOST'].'-'.getcwd().'-'.$_SERVER['REMOTE_ADDR']);
-$uri = $_SERVER['SCRIPT_URL'];
-if (empty($uri)) $uri = $_SERVER['SCRIPT_NAME'];
+$remote = ($allow_proxy && isset($_SERVER['HTTP_X_FORWARDED_FOR'])?$_SERVER['HTTP_X_FORWARDED_FOR']:$_SERVER['REMOTE_ADDR']);
+$hash = md5($_SERVER['HTTP_HOST'].'-'.getcwd().'-'.$remote);
+$uri = (isset($_SERVER['SCRIPT_URL'])?$_SERVER['SCRIPT_URL']:$_SERVER['SCRIPT_NAME']);
 $uri = str_replace('..', '', $uri);
 if (empty($uri)) die('No URI detected');
 if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SESSION['pwprotect']['hash'] !== $hash) {
@@ -20,14 +35,26 @@ if (!isset($_SESSION['pwprotect']) || !is_array($_SESSION['pwprotect']) || $_SES
     } elseif (!array_key_exists($_POST['username'], $users)) {
       trigger_error("Invalid username ($_POST[username]) $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
       echo 'Username or password is incorrect.';
-    } elseif (strtolower($users[$_POST['username']]['password']) !== md5($_POST['password'])) {
-      trigger_error("Invalid password for $_POST[username] $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
-      echo 'Username or password is incorrect.';
     } else {
-      $username = strtolower($_POST['username']);
-      trigger_error("Login Successful $username $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
-      $_SESSION['pwprotect'] = ['hash' => $hash, 'user' => $username];
-      $showform = false;
+      $expected_hash = $users[$_POST['username']]['password'];
+      $hash_matches = (
+        strlen($expected_hash)==32
+        ? ($expected_hash === md5($_POST['password']))
+        : hash_equals($expected_hash, hash('sha256', $_POST['password']))
+      );
+      if (!$hash_matches) {
+        trigger_error("Invalid password for $_POST[username] $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
+        echo 'Username or password is incorrect.';
+      } else {
+        $username = strtolower($_POST['username']);
+        ini_set('display_errors', 0);
+        ini_set('log_errors', 1);
+        trigger_error("Login Successful $username $uri $_SERVER[REMOTE_ADDR]", E_USER_WARNING);
+        ini_set('display_errors', 1);
+        $_SESSION['pwprotect'] = ['hash' => $hash, 'user' => $username];
+        $showform = false;
+      }
+      unset($crypt, $pass, $expected_hash);
     }
   }
   if ($showform) {
@@ -40,15 +67,13 @@ echo <<<EOF
 EOF;
 exit;
   }
+  unset($hash, $remote);
 }
 if (isset($_GET['logout'])) {
   $_SESSION = array();
   if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 42000,
-              $params["path"], $params["domain"],
-              $params["secure"], $params["httponly"]
-             );
+    setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
   }
   session_destroy();
   $url = urldecode($_GET['logout']);
